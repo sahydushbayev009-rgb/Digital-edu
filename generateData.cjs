@@ -114,71 +114,71 @@ const topicKeywords = {
 };
 
 function generateTestParts(topicId, titleObj) {
-    const parts = [];
-    const keywords = topicKeywords[topicId] || topicKeywords[1];
-    for (let p = 1; p <= 6; p++) {
-      const questions = [];
-      for (let i = 1; i <= 25; i++) {
-        const tool = keywords.tools[(i + p * 7) % keywords.tools.length];
-        const concept = keywords.concepts[(i * p + 3) % keywords.concepts.length];
-        const activity = keywords.activities[(i + p * 11) % keywords.activities.length];
-        const templateIdx = (i + p + topicId) % 8;
-        let qUz, qRu, qEn;
-        if (templateIdx === 0) {
-          qUz = `${tool} yordamida qanday ${activity} mumkin?`;
-          qRu = `Как можно ${activity} с помощью ${tool}?`;
-          qEn = `How can you ${activity} using ${tool}?`;
-        } else if (templateIdx === 1) {
-          qUz = `${concept} tushunchasi ${titleObj.uz} mavzusida nimani anglatadi?`;
-          qRu = `Что означает понятие ${concept} в теме ${titleObj.ru}?`;
-          qEn = `What does the concept ${concept} mean in the context of ${titleObj.en}?`;
-        } else if (templateIdx === 2) {
-          qUz = `${activity} jarayoni uchun eng mos keladigan ${titleObj.uz} vositasi?`;
-          qRu = `Наиболее подходящий инструмент ${titleObj.ru} для процесса ${activity}?`;
-          qEn = `The most suitable ${titleObj.en} tool for the process of ${activity}?`;
-        } else if (templateIdx === 3) {
-          qUz = `Nima uchun ${concept} raqamli darslarda juda muhim hisoblanadi?`;
-          qRu = `Почему ${concept} считается очень важным в цифровых уроках?`;
-          qEn = `Why is ${concept} considered very important in digital lessons?`;
-        } else if (templateIdx === 4) {
-          qUz = `${tool} va ${concept} o'zaro qanday bog'liq?`;
-          qRu = `Как связаны ${tool} и ${concept}?`;
-          qEn = `How are ${tool} and ${concept} related?`;
-        } else if (templateIdx === 5) {
-          qUz = `${activity} paytida yuzaga keladigan asosiy muammo nima?`;
-          qRu = `Какова основная проблема, возникающая при ${activity}?`;
-          qEn = `What is the main problem encountered during ${activity}?`;
-        } else if (templateIdx === 6) {
-          qUz = `${titleObj.uz} doirasida ${tool} ning asosiy afzalligi?`;
-          qRu = `Главное преимущество ${tool} в рамках ${titleObj.ru}?`;
-          qEn = `What is the main advantage of ${tool} within ${titleObj.en}?`;
-        } else {
-          qUz = `Qaysi metodika ${concept} ni qo'llashni talab etadi?`;
-          qRu = `Какая методика требует применения ${concept}?`;
-          qEn = `Which methodology requires the application of ${concept}?`;
-        }
-        const optionsUz = [`${tool} orqali`, `${concept} metodi`, `${activity} usuli`, "Barcha javoblar to'g'ri"];
-        const optionsRu = [`Через ${tool}`, `Метод ${concept}`, `Способ ${activity}`, "Все ответы верны"];
-        const optionsEn = [`Via ${tool}`, `Method ${concept}`, `Way of ${activity}`, "All of the above"];
-        questions.push({
-          q: { uz: qUz, ru: qRu, en: qEn },
-          options: { uz: optionsUz, ru: optionsRu, en: optionsEn },
-          answer: (i + p + topicId + templateIdx) % 4
-        });
+  const parts = [];
+  const keywords = topicKeywords[topicId] || topicKeywords[1];
+  for (let p = 1; p <= 6; p++) {
+    const questions = [];
+    for (let i = 1; i <= 25; i++) {
+      const tool = keywords.tools[(i + p * 7) % keywords.tools.length];
+      const concept = keywords.concepts[(i * p + 3) % keywords.concepts.length];
+      const activity = keywords.activities[(i + p * 11) % keywords.activities.length];
+      const templateIdx = (i + p + topicId) % 8;
+      let qUz, qRu, qEn;
+      if (templateIdx === 0) {
+        qUz = `${tool} yordamida qanday ${activity} mumkin?`;
+        qRu = `Как можно ${activity} с помощью ${tool}?`;
+        qEn = `How can you ${activity} using ${tool}?`;
+      } else if (templateIdx === 1) {
+        qUz = `${concept} tushunchasi ${titleObj.uz} mavzusida nimani anglatadi?`;
+        qRu = `Что означает понятие ${concept} в теме ${titleObj.ru}?`;
+        qEn = `What does the concept ${concept} mean in the context of ${titleObj.en}?`;
+      } else if (templateIdx === 2) {
+        qUz = `${activity} jarayoni uchun eng mos keladigan ${titleObj.uz} vositasi?`;
+        qRu = `Наиболее подходящий инструмент ${titleObj.ru} для процесса ${activity}?`;
+        qEn = `The most suitable ${titleObj.en} tool for the process of ${activity}?`;
+      } else if (templateIdx === 3) {
+        qUz = `Nima uchun ${concept} raqamli darslarda juda muhim hisoblanadi?`;
+        qRu = `Почему ${concept} считается очень важным в цифровых уроках?`;
+        qEn = `Why is ${concept} considered very important in digital lessons?`;
+      } else if (templateIdx === 4) {
+        qUz = `${tool} va ${concept} o'zaro qanday bog'liq?`;
+        qRu = `Как связаны ${tool} и ${concept}?`;
+        qEn = `How are ${tool} and ${concept} related?`;
+      } else if (templateIdx === 5) {
+        qUz = `${activity} paytida yuzaga keladigan asosiy muammo nima?`;
+        qRu = `Какова основная проблема, возникающая при ${activity}?`;
+        qEn = `What is the main problem encountered during ${activity}?`;
+      } else if (templateIdx === 6) {
+        qUz = `${titleObj.uz} doirasida ${tool} ning asosiy afzalligi?`;
+        qRu = `Главное преимущество ${tool} в рамках ${titleObj.ru}?`;
+        qEn = `What is the main advantage of ${tool} within ${titleObj.en}?`;
+      } else {
+        qUz = `Qaysi metodika ${concept} ni qo'llashni talab etadi?`;
+        qRu = `Какая методика требует применения ${concept}?`;
+        qEn = `Which methodology requires the application of ${concept}?`;
       }
-      parts.push({
-        id: p,
-        title: { uz: `${p}-qism`, ru: `Часть ${p}`, en: `Part ${p}` },
-        questions
+      const optionsUz = [`${tool} orqali`, `${concept} metodi`, `${activity} usuli`, "Barcha javoblar to'g'ri"];
+      const optionsRu = [`Через ${tool}`, `Метод ${concept}`, `Способ ${activity}`, "Все ответы верны"];
+      const optionsEn = [`Via ${tool}`, `Method ${concept}`, `Way of ${activity}`, "All of the above"];
+      questions.push({
+        q: { uz: qUz, ru: qRu, en: qEn },
+        options: { uz: optionsUz, ru: optionsRu, en: optionsEn },
+        answer: (i + p + topicId + templateIdx) % 4
       });
     }
-    return parts;
+    parts.push({
+      id: p,
+      title: { uz: `${p}-qism`, ru: `Часть ${p}`, en: `Part ${p}` },
+      questions
+    });
+  }
+  return parts;
 }
 
 const finalTopics = topicsData.map((t, idx) => {
   const colors = ['#00f0ff', '#a855f7', '#ec4899', '#f97316', '#3b82f6', '#22c55e', '#ef4444', '#eab308', '#6366f1', '#14b8a6'];
   const topicData = rawData[t.id] || rawData[1];
-  
+
   return {
     id: t.id,
     title: t.title,

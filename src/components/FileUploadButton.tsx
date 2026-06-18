@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { Upload, CheckCircle, AlertCircle, FileText, X } from 'lucide-react';
 import { validatePracticeFile } from '../utils/fileValidation';
 import { useSubmissionStore } from '../store/useSubmissionStore';
 import { useI18nStore } from '../store/useI18nStore';
@@ -12,6 +13,10 @@ const labels = {
     invalidFile: "Yaroqsiz fayl",
     accepted: "Qabul qilinadi: .doc, .docx (maks 10 MB)",
     ariaLabel: "Amaliyot faylini yuklash",
+    dragDrop: "Faylni bu yerga tashlang yoki",
+    browse: "tanlang",
+    selectedFile: "Tanlangan fayl",
+    removeFile: "O'chirish",
   },
   ru: {
     uploading: "Загрузка...",
@@ -21,6 +26,10 @@ const labels = {
     invalidFile: "Недопустимый файл",
     accepted: "Допустимые форматы: .doc, .docx (макс. 10 МБ)",
     ariaLabel: "Загрузить файл практики",
+    dragDrop: "Перетащите файл сюда или",
+    browse: "выберите",
+    selectedFile: "Выбранный файл",
+    removeFile: "Удалить",
   },
   en: {
     uploading: "Uploading...",
@@ -30,6 +39,10 @@ const labels = {
     invalidFile: "Invalid file",
     accepted: "Accepted: .doc, .docx (max 10 MB)",
     ariaLabel: "Upload practice file",
+    dragDrop: "Drop file here or",
+    browse: "browse",
+    selectedFile: "Selected file",
+    removeFile: "Remove",
   },
 }
 
@@ -43,7 +56,8 @@ export default function FileUploadButton({ contentItemId, onUploadComplete }: Fi
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const { language } = useI18nStore();
   const L = labels[language];
 
@@ -53,20 +67,16 @@ export default function FileUploadButton({ contentItemId, onUploadComplete }: Fi
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processFile = async (file: File) => {
     // Reset states
     setError(null);
     setSuccess(false);
-    setSelectedFileName(file.name);
+    setSelectedFile(file);
 
     // Client-side validation
     const validation = validatePracticeFile(file);
     if (!validation.valid) {
       setError(validation.error || L.invalidFile);
-      // Reset input so the same file can be re-selected
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -90,8 +100,39 @@ export default function FileUploadButton({ contentItemId, onUploadComplete }: Fi
     }
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      await processFile(file);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setError(null);
+    setSuccess(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       <input
         ref={fileInputRef}
         type="file"
@@ -101,47 +142,78 @@ export default function FileUploadButton({ contentItemId, onUploadComplete }: Fi
         aria-label={L.ariaLabel}
       />
 
-      <button
-        type="button"
+      {/* Drop zone / Upload area */}
+      <div
         onClick={handleButtonClick}
-        disabled={uploading}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`relative cursor-pointer rounded-xl border-2 border-dashed p-6 text-center transition-all duration-300 ${
+          isDragOver
+            ? 'border-cyan-400/50 bg-cyan-500/10'
+            : uploading
+            ? 'border-white/10 bg-white/[0.02] cursor-wait'
+            : 'border-white/10 bg-white/[0.02] hover:border-cyan-400/30 hover:bg-white/[0.04]'
+        }`}
       >
         {uploading ? (
-          <>
-            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-            </svg>
-            {L.uploading}
-          </>
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 rounded-full border-2 border-cyan-400/20 border-t-cyan-400 animate-spin" />
+            <p className="text-white/50 text-sm font-medium">{L.uploading}</p>
+          </div>
         ) : (
-          <>
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5m0 0l5 5m-5-5v12" />
-            </svg>
-            {L.uploadFile}
-          </>
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+              <Upload size={22} className="text-cyan-400" />
+            </div>
+            <div>
+              <p className="text-white/60 text-sm">
+                {L.dragDrop}{' '}
+                <span className="text-cyan-400 font-bold hover:text-cyan-300">{L.browse}</span>
+              </p>
+              <p className="text-white/25 text-xs mt-1">{L.accepted}</p>
+            </div>
+          </div>
         )}
-      </button>
+      </div>
 
-      {selectedFileName && !error && !success && !uploading && (
-        <p className="text-sm text-gray-500">{selectedFileName}</p>
+      {/* Selected file info */}
+      {selectedFile && !error && !uploading && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/5">
+          <FileText size={16} className="text-indigo-400 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-white/70 text-sm font-medium truncate">{selectedFile.name}</p>
+            <p className="text-white/30 text-xs">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+          </div>
+          {!success && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRemoveFile();
+              }}
+              className="text-white/30 hover:text-white/60 transition-colors"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
       )}
 
+      {/* Error */}
       {error && (
-        <p className="text-sm text-red-600 font-medium" role="alert">
-          {error}
-        </p>
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20" role="alert">
+          <AlertCircle size={14} className="text-red-400 shrink-0" />
+          <p className="text-sm text-red-300 font-medium">{error}</p>
+        </div>
       )}
 
+      {/* Success */}
       {success && (
-        <p className="text-sm text-green-600 font-medium" role="status">
-          {L.uploadSuccess}
-        </p>
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/20" role="status">
+          <CheckCircle size={14} className="text-green-400 shrink-0" />
+          <p className="text-sm text-green-300 font-medium">{L.uploadSuccess}</p>
+        </div>
       )}
-
-      <p className="text-xs text-gray-400">{L.accepted}</p>
     </div>
   );
 }

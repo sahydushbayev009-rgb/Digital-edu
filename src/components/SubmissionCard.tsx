@@ -1,37 +1,58 @@
-import React from 'react';
-import type { Submission } from '../types/submission';
+import React, { useState } from 'react';
+import { saveAs } from 'file-saver';
+import { Download, FileDown, Loader2 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import type { SubmissionWithContent } from '../types/submission';
 import { useI18nStore } from '../store/useI18nStore';
+import { useAuthStore } from '../store/useAuthStore';
+import { generateAcademicDocxBlob } from '../utils/documentGenerator';
 
 const labels = {
   uz: {
     pending: "Kutilmoqda",
     graded: "Baholangan",
-    score: "Ball",
-    feedback: "Izoh",
+    score: "Baho",
+    feedback: "Taqriz",
+    download: "Faylni yuklash",
+    downloading: "Yuklanmoqda...",
+    exportWord: "Word formatda yuklash",
+    exporting: "Tayyorlanmoqda...",
   },
   ru: {
-    pending: "Ожидает",
+    pending: "В ожидании",
     graded: "Оценено",
-    score: "Балл",
+    score: "Оценка",
     feedback: "Отзыв",
+    download: "Скачать файл",
+    downloading: "Загрузка...",
+    exportWord: "Скачать в Word",
+    exporting: "Подготовка...",
   },
   en: {
     pending: "Pending",
     graded: "Graded",
     score: "Score",
     feedback: "Feedback",
+    download: "Download file",
+    downloading: "Downloading...",
+    exportWord: "Export as Word",
+    exporting: "Preparing...",
   },
 }
 
 interface SubmissionCardProps {
-  submission: Submission;
+  submission: SubmissionWithContent;
 }
 
 const SubmissionCard: React.FC<SubmissionCardProps> = ({ submission }) => {
   const { language } = useI18nStore();
+  const { profile } = useAuthStore();
   const L = labels[language];
   const isPending = submission.status === 'pending';
   const isGraded = submission.status === 'graded';
+
+  const [downloadingFile, setDownloadingFile] = useState(false);
+  const [exportingWord, setExportingWord] = useState(false);
 
   const formattedDate = new Date(submission.created_at).toLocaleDateString('ru-RU', {
     day: '2-digit',
@@ -41,8 +62,75 @@ const SubmissionCard: React.FC<SubmissionCardProps> = ({ submission }) => {
     minute: '2-digit',
   });
 
+  const getDocData = () => {
+    const studentName = profile?.full_name || "Talaba";
+    const groupName = profile?.group_name || "Guruhsiz";
+    const topicTitle = submission.content_items?.title || "Raqamli amaliyot ishi";
+    const topicId = submission.content_items?.topic_id || 1;
+    const date = new Date(submission.created_at).toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+
+    return {
+      title: topicTitle,
+      studentName,
+      groupName,
+      date,
+      topicId,
+    };
+  };
+
+  const handleDownloadFile = async () => {
+    setDownloadingFile(true);
+    try {
+      // 1. Try to download from storage
+      const { data, error } = await supabase.storage
+        .from('practice-files')
+        .createSignedUrl(submission.file_path, 300);
+
+      if (error || !data?.signedUrl) {
+        throw new Error(error?.message || 'Signed URL failed');
+      }
+
+      window.open(data.signedUrl, '_blank');
+    } catch (err) {
+      console.warn('Storage download failed, falling back to client-generated docx:', err);
+      // Fallback: Generate the 4-page academic docx
+      try {
+        const docData = getDocData();
+        const blob = await generateAcademicDocxBlob(docData, language);
+        
+        const safeStudentName = docData.studentName.replace(/[^a-zA-Z0-9а-яА-ЯёЁ\s\u0400-\u04FF\u0600-\u06FF]/g, '').replace(/\s+/g, '_');
+        const safeTopic = docData.title.substring(0, 30).replace(/[^a-zA-Z0-9а-яА-ЯёЁ\s\u0400-\u04FF\u0600-\u06FF]/g, '').replace(/\s+/g, '_');
+        saveAs(blob, `Mustaqil_ish_${safeTopic}_${safeStudentName}.docx`);
+      } catch (genErr) {
+        console.error('Failed to generate fallback document:', genErr);
+      }
+    } finally {
+      setDownloadingFile(false);
+    }
+  };
+
+  const handleExportWord = async () => {
+    setExportingWord(true);
+    try {
+      const docData = getDocData();
+      const blob = await generateAcademicDocxBlob(docData, language);
+
+      const safeStudentName = docData.studentName.replace(/[^a-zA-Z0-9а-яА-ЯёЁ\s\u0400-\u04FF\u0600-\u06FF]/g, '').replace(/\s+/g, '_');
+      const safeTopic = docData.title.substring(0, 30).replace(/[^a-zA-Z0-9а-яА-ЯёЁ\s\u0400-\u04FF\u0600-\u06FF]/g, '').replace(/\s+/g, '_');
+      saveAs(blob, `Mustaqil_ish_${safeTopic}_${safeStudentName}.docx`);
+    } catch (err) {
+      console.error('Word export error:', err);
+    } finally {
+      setExportingWord(false);
+    }
+  };
+
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+    <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm hover:bg-white/[0.07] transition-all duration-300">
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm text-white/70 truncate max-w-[200px]" title={submission.file_name}>
           📄 {submission.file_name}
@@ -61,7 +149,13 @@ const SubmissionCard: React.FC<SubmissionCardProps> = ({ submission }) => {
       {isGraded && submission.score !== null && (
         <div className="mb-2">
           <span className="text-sm text-white/60">{L.score}: </span>
-          <span className="text-lg font-semibold text-white">{submission.score}/100</span>
+          <span className={`text-lg font-semibold ${
+            submission.score >= 70
+              ? 'text-green-300'
+              : submission.score >= 40
+              ? 'text-yellow-300'
+              : 'text-red-300'
+          }`}>{submission.score}/100</span>
         </div>
       )}
 
@@ -72,7 +166,35 @@ const SubmissionCard: React.FC<SubmissionCardProps> = ({ submission }) => {
         </div>
       )}
 
-      <p className="text-xs text-white/50 mt-2">{formattedDate}</p>
+      <p className="text-xs text-white/50 mt-2 mb-3">{formattedDate}</p>
+
+      {/* Download and Export buttons */}
+      <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-white/5">
+        <button
+          onClick={handleDownloadFile}
+          disabled={downloadingFile}
+          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-bold hover:bg-cyan-500/20 transition-colors disabled:opacity-50"
+        >
+          {downloadingFile ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <Download size={12} />
+          )}
+          {downloadingFile ? L.downloading : L.download}
+        </button>
+        <button
+          onClick={handleExportWord}
+          disabled={exportingWord}
+          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-300 text-xs font-bold hover:bg-green-500/20 transition-colors disabled:opacity-50"
+        >
+          {exportingWord ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <FileDown size={12} />
+          )}
+          {exportingWord ? L.exporting : L.exportWord}
+        </button>
+      </div>
     </div>
   );
 };

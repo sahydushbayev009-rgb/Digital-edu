@@ -1,13 +1,13 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { validatePracticeFile } from '../utils/fileValidation';
-import type { Submission, SubmissionWithProfile, GradingFilters } from '../types/submission';
+import type { Submission, SubmissionWithProfile, SubmissionWithContent, GradingFilters } from '../types/submission';
 
 const BUCKET_NAME = 'practice-files';
 
 interface SubmissionState {
   submissions: SubmissionWithProfile[];
-  mySubmissions: Submission[];
+  mySubmissions: SubmissionWithContent[];
   loading: boolean;
   filters: GradingFilters;
 
@@ -36,7 +36,7 @@ export const useSubmissionStore = create<SubmissionState>()((set, get) => ({
         .select(`
           *,
           profiles:user_id (full_name, group_name, avatar_emoji),
-          content_items:content_item_id (title)
+          content_items:content_item_id (title, topic_id)
         `)
         .order('created_at', { ascending: false });
 
@@ -79,7 +79,10 @@ export const useSubmissionStore = create<SubmissionState>()((set, get) => ({
 
       const { data, error } = await supabase
         .from('submissions')
-        .select('*')
+        .select(`
+          *,
+          content_items:content_item_id (title, topic_id)
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -88,7 +91,7 @@ export const useSubmissionStore = create<SubmissionState>()((set, get) => ({
         return;
       }
 
-      set({ mySubmissions: (data || []) as Submission[] });
+      set({ mySubmissions: (data || []) as unknown as SubmissionWithContent[] });
     } finally {
       set({ loading: false });
     }

@@ -22,6 +22,14 @@ export interface SubmissionWithProfile extends Submission {
   };
   content_items: {
     title: string;
+    topic_id?: number;
+  };
+}
+
+export interface SubmissionWithContent extends Submission {
+  content_items: {
+    title: string;
+    topic_id?: number;
   };
 }
 
