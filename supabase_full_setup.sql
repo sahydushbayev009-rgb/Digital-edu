@@ -5,7 +5,11 @@
 -- Barcha jadval, funksiya, RLS, storage va ADMIN avtomatik yaratiladi.
 -- IF NOT EXISTS / CREATE OR REPLACE — qayta run qilsa ham xato bermaydi.
 --
--- ADMIN KIRISH:
+-- ADMIN KIRISH (Yangi Admin):
+--   Email:  superadmin@digitaledu.uz
+--   Parol:  DigitalEdu2024!Admin
+--
+-- O'QITUVCHI KIRISH (Guzal Khujaniyazova):
 --   Email:  admin@digitaledu.uz
 --   Parol:  DigitalEdu2024!Admin
 -- ============================================================================
@@ -420,18 +424,51 @@ CREATE POLICY "practice_files_delete" ON storage.objects FOR DELETE TO authentic
   USING (bucket_id = 'practice-files' AND (storage.foldername(name))[1] = auth.uid()::text);
 
 -- ============================================================================
--- 13. ADMIN AVTOMATIK YARATISH
---   Email: admin@digitaledu.uz | Parol: DigitalEdu2024!Admin
+-- 13. O'QITUVCHI (Guzal Khujaniyazova) VA YANGI ADMIN YARATISH
 -- ============================================================================
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 
 DO $$
-DECLARE admin_uid UUID;
+DECLARE
+  teacher_uid UUID;
+  admin_uid UUID;
 BEGIN
-  -- Eski admin bo'lsa tozalash
+  -- 1. O'qituvchi: Guzal Khujaniyazova (Avvalgi admin emaili -> Teacher roli)
   DELETE FROM public.profiles WHERE id IN (SELECT id FROM auth.users WHERE email = 'admin@digitaledu.uz');
   DELETE FROM auth.identities WHERE user_id IN (SELECT id FROM auth.users WHERE email = 'admin@digitaledu.uz');
   DELETE FROM auth.users WHERE email = 'admin@digitaledu.uz';
+
+  teacher_uid := gen_random_uuid();
+
+  INSERT INTO auth.users (
+    instance_id, id, aud, role, email, encrypted_password,
+    email_confirmed_at, recovery_sent_at, last_sign_in_at,
+    raw_app_meta_data, raw_user_meta_data,
+    created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token
+  ) VALUES (
+    '00000000-0000-0000-0000-000000000000', teacher_uid, 'authenticated', 'authenticated',
+    'admin@digitaledu.uz', crypt('DigitalEdu2024!Admin', gen_salt('bf')), now(), now(), now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"full_name":"Guzal Khujaniyazova","username":"guzal_teacher","avatar_emoji":"👩‍🏫","group_name":"Teachers"}'::jsonb,
+    now(), now(), '', '', '', ''
+  );
+
+  INSERT INTO auth.identities (
+    id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+  ) VALUES (
+    teacher_uid, teacher_uid, teacher_uid::text,
+    jsonb_build_object('sub', teacher_uid::text, 'email', 'admin@digitaledu.uz', 'email_verified', true, 'provider', 'email'),
+    'email', now(), now(), now()
+  );
+
+  INSERT INTO public.profiles (id, username, full_name, avatar_emoji, group_name, role)
+  VALUES (teacher_uid, 'guzal_teacher', 'Guzal Khujaniyazova', '👩‍🏫', 'Teachers', 'teacher')
+  ON CONFLICT (id) DO UPDATE SET role = 'teacher', full_name = 'Guzal Khujaniyazova', avatar_emoji = '👩‍🏫';
+
+  -- 2. Yangi Admin (superadmin@digitaledu.uz)
+  DELETE FROM public.profiles WHERE id IN (SELECT id FROM auth.users WHERE email = 'superadmin@digitaledu.uz');
+  DELETE FROM auth.identities WHERE user_id IN (SELECT id FROM auth.users WHERE email = 'superadmin@digitaledu.uz');
+  DELETE FROM auth.users WHERE email = 'superadmin@digitaledu.uz';
 
   admin_uid := gen_random_uuid();
 
@@ -442,25 +479,23 @@ BEGIN
     created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token
   ) VALUES (
     '00000000-0000-0000-0000-000000000000', admin_uid, 'authenticated', 'authenticated',
-    'admin@digitaledu.uz', crypt('DigitalEdu2024!Admin', gen_salt('bf')), now(), now(), now(),
+    'superadmin@digitaledu.uz', crypt('DigitalEdu2024!Admin', gen_salt('bf')), now(), now(), now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
-    '{"full_name":"Guzal Khujaniyazova","username":"admin","avatar_emoji":"👑","group_name":"Administrators"}'::jsonb,
+    '{"full_name":"Bosh Administrator","username":"superadmin","avatar_emoji":"👑","group_name":"Administrators"}'::jsonb,
     now(), now(), '', '', '', ''
   );
 
-  -- MUHIM: identities (id ustuni ushbu bazada UUID turi)
   INSERT INTO auth.identities (
     id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
   ) VALUES (
     admin_uid, admin_uid, admin_uid::text,
-    jsonb_build_object('sub', admin_uid::text, 'email', 'admin@digitaledu.uz', 'email_verified', true, 'provider', 'email'),
+    jsonb_build_object('sub', admin_uid::text, 'email', 'superadmin@digitaledu.uz', 'email_verified', true, 'provider', 'email'),
     'email', now(), now(), now()
   );
 
-  -- Admin profili
   INSERT INTO public.profiles (id, username, full_name, avatar_emoji, group_name, role)
-  VALUES (admin_uid, 'admin', 'Guzal Khujaniyazova', '👑', 'Administrators', 'admin')
-  ON CONFLICT (id) DO UPDATE SET role = 'admin', full_name = 'Guzal Khujaniyazova';
+  VALUES (admin_uid, 'superadmin', 'Bosh Administrator', '👑', 'Administrators', 'admin')
+  ON CONFLICT (id) DO UPDATE SET role = 'admin', full_name = 'Bosh Administrator', avatar_emoji = '👑';
 END $$;
 
 CREATE TRIGGER on_auth_user_created
@@ -473,6 +508,11 @@ NOTIFY pgrst, 'reload schema';
 
 -- ============================================================================
 -- ✅ TAYYOR! Endi ilovaga kiring:
---   Email:  admin@digitaledu.uz
---   Parol:  DigitalEdu2024!Admin
+--   1. Yangi Admin:
+--      Email:  superadmin@digitaledu.uz
+--      Parol:  DigitalEdu2024!Admin
+--
+--   2. O'qituvchi (Guzal Khujaniyazova):
+--      Email:  admin@digitaledu.uz
+--      Parol:  DigitalEdu2024!Admin
 -- ============================================================================
