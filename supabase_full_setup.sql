@@ -430,28 +430,29 @@ DECLARE admin_uid UUID;
 BEGIN
   -- Eski admin bo'lsa tozalash
   DELETE FROM public.profiles WHERE id IN (SELECT id FROM auth.users WHERE email = 'admin@digitaledu.uz');
-  DELETE FROM auth.identities WHERE provider_id IN (SELECT id::text FROM auth.users WHERE email = 'admin@digitaledu.uz');
+  DELETE FROM auth.identities WHERE user_id IN (SELECT id FROM auth.users WHERE email = 'admin@digitaledu.uz');
   DELETE FROM auth.users WHERE email = 'admin@digitaledu.uz';
 
   admin_uid := gen_random_uuid();
 
   INSERT INTO auth.users (
     instance_id, id, aud, role, email, encrypted_password,
-    email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
-    created_at, updated_at, confirmation_token, email_change_token_new, recovery_token
+    email_confirmed_at, recovery_sent_at, last_sign_in_at,
+    raw_app_meta_data, raw_user_meta_data,
+    created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token
   ) VALUES (
     '00000000-0000-0000-0000-000000000000', admin_uid, 'authenticated', 'authenticated',
-    'admin@digitaledu.uz', crypt('DigitalEdu2024!Admin', gen_salt('bf')), now(),
+    'admin@digitaledu.uz', crypt('DigitalEdu2024!Admin', gen_salt('bf')), now(), now(), now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"full_name":"Admin Rahimov","username":"admin","avatar_emoji":"👑","group_name":"Administrators"}'::jsonb,
-    now(), now(), '', '', ''
+    now(), now(), '', '', '', ''
   );
 
-  -- MUHIM: identities (login ishlashi uchun shart)
+  -- MUHIM: identities (id ustuni admin_uid::text bo'lishi shart)
   INSERT INTO auth.identities (
     id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
   ) VALUES (
-    gen_random_uuid(), admin_uid, admin_uid::text,
+    admin_uid::text, admin_uid, admin_uid::text,
     jsonb_build_object('sub', admin_uid::text, 'email', 'admin@digitaledu.uz', 'email_verified', true, 'provider', 'email'),
     'email', now(), now(), now()
   );
@@ -459,7 +460,7 @@ BEGIN
   -- Admin profili
   INSERT INTO public.profiles (id, username, full_name, avatar_emoji, group_name, role)
   VALUES (admin_uid, 'admin', 'Admin Rahimov', '👑', 'Administrators', 'admin')
-  ON CONFLICT (id) DO UPDATE SET role = 'admin';
+  ON CONFLICT (id) DO UPDATE SET role = 'admin', full_name = 'Admin Rahimov';
 END $$;
 
 CREATE TRIGGER on_auth_user_created
