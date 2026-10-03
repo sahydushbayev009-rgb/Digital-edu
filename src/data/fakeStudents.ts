@@ -37,7 +37,7 @@ function seeded(seed: number) {
 }
 
 function levelFromXp(xp: number): number {
-  return Math.max(1, Math.floor(xp / 250) + 1)
+  return Math.max(1, Math.floor(xp / 100) + 1)
 }
 
 export function generateFakeStudents(count = 108): LeaderboardEntry[] {
@@ -50,15 +50,63 @@ export function generateFakeStudents(count = 108): LeaderboardEntry[] {
     const emoji = EMOJIS[Math.floor(rand() * EMOJIS.length)]
     const group = GROUPS[Math.floor(rand() * GROUPS.length)]
 
-    // Yangi sayt uchun kichikroq qiymatlar — eng ko'pi ~150 XP atrofida bo'ladi.
-    const totalQuizzes = Math.floor(rand() * 8) + 1  // 1-8 ta test
-    const totalPractices = Math.floor(rand() * 6) + 0  // 0-5 ta amaliyot
-    const totalQuizXp = totalQuizzes * (Math.floor(rand() * 12) + 3)  // har test ~3-15 XP
-    const totalPracticeXp = totalPractices * (Math.floor(rand() * 10) + 2)  // har amaliyot ~2-12 XP
-    const diagnosticScore = Math.floor(rand() * 8) + 2  // 2-9 ball (20-90 XP diagnostik)
-    const totalXp = totalQuizXp + totalPracticeXp + diagnosticScore * 10
-    const avgPercentage = Math.floor(rand() * 40) + 40  // 40-79% o'rtacha natija
-    const topicsCompleted = Math.floor(rand() * 4) + 0  // 0-3 ta mavzu tugallangan
+    // Yuqori va mukammal ballar taqsimoti
+    let totalQuizzes: number
+    let totalPractices: number
+    let totalQuizXp: number
+    let totalPracticeXp: number
+    let diagnosticScore: number
+    let avgPercentage: number
+    let topicsCompleted: number
+
+    if (i < 5) {
+      // 1-5 o'rinlar: Yetakchi a'lochi talabalar (1100 - 1500+ XP)
+      totalQuizzes = Math.floor(rand() * 8) + 20        // 20-27 ta test
+      totalPractices = Math.floor(rand() * 5) + 10     // 10-14 ta amaliyot
+      totalQuizXp = totalQuizzes * 28 + Math.floor(rand() * 80)
+      totalPracticeXp = totalPractices * 45 + Math.floor(rand() * 60)
+      diagnosticScore = Math.floor(rand() * 3) + 23    // 23-25 ball
+      avgPercentage = Math.floor(rand() * 6) + 94      // 94-99%
+      topicsCompleted = Math.floor(rand() * 2) + 9     // 9-10 ta mavzu
+    } else if (i < 18) {
+      // 6-18 o'rinlar: Yuqori natijadorlar (700 - 1100 XP)
+      totalQuizzes = Math.floor(rand() * 8) + 14        // 14-21 ta test
+      totalPractices = Math.floor(rand() * 4) + 6       // 6-9 ta amaliyot
+      totalQuizXp = totalQuizzes * 24 + Math.floor(rand() * 50)
+      totalPracticeXp = totalPractices * 40 + Math.floor(rand() * 40)
+      diagnosticScore = Math.floor(rand() * 4) + 20    // 20-23 ball
+      avgPercentage = Math.floor(rand() * 7) + 88      // 88-94%
+      topicsCompleted = Math.floor(rand() * 3) + 7     // 7-9 ta mavzu
+    } else if (i < 45) {
+      // 19-45 o'rinlar: O'rta-yuqori (400 - 700 XP)
+      totalQuizzes = Math.floor(rand() * 6) + 8         // 8-13 ta test
+      totalPractices = Math.floor(rand() * 4) + 3       // 3-6 ta amaliyot
+      totalQuizXp = totalQuizzes * 20 + Math.floor(rand() * 40)
+      totalPracticeXp = totalPractices * 35 + Math.floor(rand() * 30)
+      diagnosticScore = Math.floor(rand() * 6) + 16    // 16-21 ball
+      avgPercentage = Math.floor(rand() * 10) + 80     // 80-89%
+      topicsCompleted = Math.floor(rand() * 3) + 4     // 4-6 ta mavzu
+    } else if (i < 80) {
+      // 46-80 o'rinlar: O'rtacha (220 - 400 XP)
+      totalQuizzes = Math.floor(rand() * 5) + 5         // 5-9 ta test
+      totalPractices = Math.floor(rand() * 3) + 2       // 2-4 ta amaliyot
+      totalQuizXp = totalQuizzes * 16 + Math.floor(rand() * 30)
+      totalPracticeXp = totalPractices * 30 + Math.floor(rand() * 20)
+      diagnosticScore = Math.floor(rand() * 6) + 12    // 12-17 ball
+      avgPercentage = Math.floor(rand() * 12) + 70     // 70-81%
+      topicsCompleted = Math.floor(rand() * 2) + 2     // 2-3 ta mavzu
+    } else {
+      // 81-108 o'rinlar: Yangi boshlaganlar (100 - 220 XP)
+      totalQuizzes = Math.floor(rand() * 4) + 2         // 2-5 ta test
+      totalPractices = Math.floor(rand() * 2) + 1       // 1-2 ta amaliyot
+      totalQuizXp = totalQuizzes * 14 + Math.floor(rand() * 20)
+      totalPracticeXp = totalPractices * 25 + Math.floor(rand() * 15)
+      diagnosticScore = Math.floor(rand() * 5) + 8      // 8-12 ball
+      avgPercentage = Math.floor(rand() * 15) + 60     // 60-74%
+      topicsCompleted = 1
+    }
+
+    const totalXp = totalQuizXp + totalPracticeXp + diagnosticScore * 4
 
     entries.push({
       user_id: `fake-${i + 1}`,
@@ -77,5 +125,6 @@ export function generateFakeStudents(count = 108): LeaderboardEntry[] {
     })
   }
 
-  return entries
+  // XP bo'yicha saralangan holda qaytaramiz
+  return entries.sort((a, b) => b.total_xp - a.total_xp)
 }

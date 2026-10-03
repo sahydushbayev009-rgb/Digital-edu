@@ -2,8 +2,18 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { validatePracticeFile } from '../utils/fileValidation';
 import type { Submission, SubmissionWithProfile, SubmissionWithContent, GradingFilters } from '../types/submission';
+import { INITIAL_FAKE_SUBMISSIONS } from '../data/fakeSubmissions';
 
 const BUCKET_NAME = 'practice-files';
+const FAKE_SUBMISSIONS_KEY = 'digitaledu_fake_submissions';
+
+function getStoredFakeSubmissions(): SubmissionWithProfile[] {
+  try {
+    const raw = localStorage.getItem(FAKE_SUBMISSIONS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return INITIAL_FAKE_SUBMISSIONS;
+}
 
 interface SubmissionState {
   submissions: SubmissionWithProfile[];
@@ -40,25 +50,26 @@ export const useSubmissionStore = create<SubmissionState>()((set, get) => ({
         `)
         .order('created_at', { ascending: false });
 
-      const { filters } = get();
-
-      if (filters.status !== 'all') {
-        query = query.eq('status', filters.status);
-      }
-      if (filters.contentItemId) {
-        query = query.eq('content_item_id', filters.contentItemId);
-      }
-
       const { data, error } = await query;
 
       if (error) {
         console.error('Fetch submissions error:', error);
-        return;
       }
 
-      let results = (data || []) as SubmissionWithProfile[];
+      const realData = (data || []) as SubmissionWithProfile[];
+      const fakeData = getStoredFakeSubmissions();
 
-      // Client-side group filtering (since group_name is on the joined profile)
+      // Haqiqiy va soxta topshiriqlarni birlashtiramiz
+      let results = [...realData, ...fakeData];
+
+      const { filters } = get();
+
+      if (filters.status !== 'all') {
+        results = results.filter((s) => s.status === filters.status);
+      }
+      if (filters.contentItemId) {
+        results = results.filter((s) => s.content_item_id === filters.contentItemId);
+      }
       if (filters.group) {
         results = results.filter(
           (s) => s.profiles?.group_name === filters.group
@@ -187,6 +198,26 @@ export const useSubmissionStore = create<SubmissionState>()((set, get) => ({
   gradeSubmission: async (submissionId: string, score: number, feedback: string) => {
     set({ loading: true });
     try {
+      if (submissionId.startsWith('fake-')) {
+        const stored = getStoredFakeSubmissions();
+        const updated = stored.map((s) =>
+          s.id === submissionId
+            ? {
+                ...s,
+                status: 'graded' as const,
+                score,
+                feedback: feedback || null,
+                graded_by: 'guzal_teacher',
+                graded_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              }
+            : s
+        );
+        localStorage.setItem(FAKE_SUBMISSIONS_KEY, JSON.stringify(updated));
+        await get().fetchAllSubmissions();
+        return { error: null };
+      }
+
       const { error } = await supabase.rpc('grade_submission', {
         p_submission_id: submissionId,
         p_score: score,
