@@ -444,7 +444,7 @@ BEGIN
     '00000000-0000-0000-0000-000000000000', admin_uid, 'authenticated', 'authenticated',
     'admin@digitaledu.uz', crypt('DigitalEdu2024!Admin', gen_salt('bf')), now(), now(), now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
-    '{"full_name":"Admin Rahimov","username":"admin","avatar_emoji":"👑","group_name":"Administrators"}'::jsonb,
+    '{"full_name":"Guzal Khujaniyazova","username":"admin","avatar_emoji":"👑","group_name":"Administrators"}'::jsonb,
     now(), now(), '', '', '', ''
   );
 
@@ -459,8 +459,8 @@ BEGIN
 
   -- Admin profili
   INSERT INTO public.profiles (id, username, full_name, avatar_emoji, group_name, role)
-  VALUES (admin_uid, 'admin', 'Admin Rahimov', '👑', 'Administrators', 'admin')
-  ON CONFLICT (id) DO UPDATE SET role = 'admin', full_name = 'Admin Rahimov';
+  VALUES (admin_uid, 'admin', 'Guzal Khujaniyazova', '👑', 'Administrators', 'admin')
+  ON CONFLICT (id) DO UPDATE SET role = 'admin', full_name = 'Guzal Khujaniyazova';
 END $$;
 
 CREATE TRIGGER on_auth_user_created
