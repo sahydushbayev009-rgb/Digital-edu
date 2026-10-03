@@ -448,11 +448,11 @@ BEGIN
     now(), now(), '', '', '', ''
   );
 
-  -- MUHIM: identities (id ustuni admin_uid::text bo'lishi shart)
+  -- MUHIM: identities (id ustuni ushbu bazada UUID turi)
   INSERT INTO auth.identities (
     id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
   ) VALUES (
-    admin_uid::text, admin_uid, admin_uid::text,
+    admin_uid, admin_uid, admin_uid::text,
     jsonb_build_object('sub', admin_uid::text, 'email', 'admin@digitaledu.uz', 'email_verified', true, 'provider', 'email'),
     'email', now(), now(), now()
   );
